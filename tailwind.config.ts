@@ -52,6 +52,26 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Custom Mangrove Theme Colors
+				mangrove: {
+					dark: 'hsl(var(--mangrove-dark))',
+					medium: 'hsl(var(--mangrove-medium))',
+					light: 'hsl(var(--mangrove-light))'
+				},
+				ocean: {
+					deep: 'hsl(var(--ocean-deep))',
+					medium: 'hsl(var(--ocean-medium))',
+					light: 'hsl(var(--ocean-light))'
+				},
+				reef: {
+					coral: 'hsl(var(--reef-coral))',
+					orange: 'hsl(var(--reef-orange))'
+				},
+				status: {
+					success: 'hsl(var(--success))',
+					warning: 'hsl(var(--warning))',
+					info: 'hsl(var(--info))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,6 +87,18 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-mangrove': 'var(--gradient-mangrove)',
+				'gradient-ocean': 'var(--gradient-ocean)',
+				'gradient-reef': 'var(--gradient-reef)'
+			},
+			boxShadow: {
+				'mangrove': 'var(--shadow-mangrove)',
+				'ocean': 'var(--shadow-ocean)'
+			},
+			transitionTimingFunction: {
+				'smooth': 'var(--transition-smooth)'
 			},
 			keyframes: {
 				'accordion-down': {
