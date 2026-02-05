@@ -1,294 +1,283 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  AlertTriangle, 
-  Search, 
-  Filter, 
-  Eye, 
-  MapPin, 
-  Calendar,
-  User,
-  ChevronDown
-} from "lucide-react";
+import { AlertTriangle, Search, Filter, Eye, MapPin, Calendar, User, Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatDistanceToNow } from "date-fns";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog";
 
 interface Incident {
   id: string;
   type: string;
   location: string;
-  reporter: string;
-  date: string;
-  time: string;
+  reporter_name: string;
+  created_at: string;
   status: 'new' | 'investigating' | 'resolved' | 'dismissed';
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
 }
 
-const mockIncidents: Incident[] = [
-  {
-    id: 'INC-2024-001',
-    type: 'Illegal Logging',
-    location: 'Mangrove Sector A-7',
-    reporter: 'Marine Bio NGO',
-    date: '2024-01-15',
-    time: '14:30',
-    status: 'new',
-    severity: 'high',
-    description: 'Large-scale tree cutting observed in protected zone'
-  },
-  {
-    id: 'INC-2024-002',
-    type: 'Unauthorized Fishing',
-    location: 'Coastal Zone B-12',
-    reporter: 'Local Fisherman',
-    date: '2024-01-14',
-    time: '08:15',
-    status: 'investigating',
-    severity: 'medium',
-    description: 'Commercial fishing nets found in restricted breeding area'
-  },
-  {
-    id: 'INC-2024-003',
-    type: 'Pollution Discharge',
-    location: 'River Delta C-3',
-    reporter: 'EcoGuardians',
-    date: '2024-01-13',
-    time: '16:45',
-    status: 'resolved',
-    severity: 'critical',
-    description: 'Industrial waste discharge affecting water quality'
-  },
-  {
-    id: 'INC-2024-004',
-    type: 'Wildlife Poaching',
-    location: 'Protected Area D-9',
-    reporter: 'Coastal Watch',
-    date: '2024-01-12',
-    time: '22:20',
-    status: 'investigating',
-    severity: 'high',
-    description: 'Evidence of bird trapping and habitat destruction'
-  },
-  {
-    id: 'INC-2024-005',
-    type: 'Land Reclamation',
-    location: 'Mangrove Sector E-4',
-    reporter: 'Community Leader',
-    date: '2024-01-11',
-    time: '10:30',
-    status: 'dismissed',
-    severity: 'low',
-    description: 'Small-scale unauthorized landfill in mangrove area'
-  }
-];
-
-const StatusBadge = ({ status }: { status: Incident['status'] }) => {
-  const variants = {
-    new: 'bg-destructive/10 text-destructive border-destructive/20',
-    investigating: 'bg-status-warning/10 text-status-warning border-status-warning/20',
-    resolved: 'bg-status-success/10 text-status-success border-status-success/20',
-    dismissed: 'bg-muted text-muted-foreground border-border'
-  };
-
-  return (
-    <Badge variant="outline" className={variants[status]}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </Badge>
-  );
-};
-
-const SeverityBadge = ({ severity }: { severity: Incident['severity'] }) => {
-  const variants = {
-    low: 'bg-status-info/10 text-status-info border-status-info/20',
-    medium: 'bg-status-warning/10 text-status-warning border-status-warning/20',
-    high: 'bg-reef-orange/10 text-reef-orange border-reef-orange/20',
-    critical: 'bg-destructive/10 text-destructive border-destructive/20'
-  };
-
-  return (
-    <Badge variant="outline" className={variants[severity]}>
-      {severity.charAt(0).toUpperCase() + severity.slice(1)}
-    </Badge>
-  );
-};
-
 export const AdminIncidents = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [incidents] = useState<Incident[]>(mockIncidents);
-  const [sortBy, setSortBy] = useState<string>('date');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+    const { toast } = useToast();
+    const [incidents, setIncidents] = useState<Incident[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
 
-  const filteredIncidents = incidents.filter(incident => {
-    const matchesSearch = incident.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         incident.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         incident.reporter.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = filterStatus === 'all' || incident.status === filterStatus;
-    
-    return matchesSearch && matchesFilter;
-  });
+    // Fetch incidents
+    const fetchIncidents = async () => {
+        const { data, error } = await supabase
+            .from('incidents')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error(error);
+            toast({
+                title: "Error",
+                description: "Failed to fetch incidents",
+                variant: "destructive"
+            });
+        } else {
+            setIncidents(data || []);
+        }
+    };
+
+    useEffect(() => {
+        fetchIncidents();
+    }, []);
+
+    const handleStatusUpdate = async (id: string, newStatus: string) => {
+        const { error } = await supabase
+            .from('incidents')
+            .update({ status: newStatus })
+            .eq('id', id);
+
+        if (error) {
+            toast({
+                title: "Update Failed",
+                description: "Could not update status",
+                variant: "destructive"
+            });
+        } else {
+            toast({
+                title: "Status Updated",
+                description: `Incident marked as ${newStatus}`,
+            });
+            fetchIncidents(); 
+        }
+    };
+
+    const handleDeleteIncident = async (id: string) => {
+        const { error } = await supabase
+            .from('incidents')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            toast({
+                title: "Deletion Failed",
+                description: error.message,
+                variant: "destructive"
+            });
+        } else {
+            toast({
+                title: "Incident Deleted",
+                description: "The report has been removed.",
+            });
+            fetchIncidents();
+        }
+    };
+
+    const filteredIncidents = incidents.filter(incident => {
+        const matchesSearch = incident.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              incident.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              incident.reporter_name?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || incident.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Incident Management</h1>
-        <p className="text-muted-foreground">Monitor and manage all reported incidents</p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Incident Management</h1>
+          <p className="text-muted-foreground">Monitor and respond to environmental reports.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchIncidents}>
+             Refresh Data
+          </Button>
+          <Button className="gap-2">
+            <Filter className="h-4 w-4" />
+            Export Report
+          </Button>
+        </div>
       </div>
 
-      {/* Controls */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search details..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="investigating">Investigating</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+              <SelectItem value="dismissed">Dismissed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-primary" />
-                All Incidents
-              </CardTitle>
-              <CardDescription>
-                {filteredIncidents.length} incidents found
-              </CardDescription>
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search incidents..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full md:w-64"
-                />
-              </div>
-              
-              <Button
-                variant="outline"
-                onClick={() => setFilterStatus(filterStatus === 'all' ? 'new' : 'all')}
-                className="flex items-center gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                Filter
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+        <CardHeader className="px-6 py-4 border-b border-border">
+          <CardTitle>Recent Reports</CardTitle>
+          <CardDescription>
+            Showing {filteredIncidents.length} incidents
+          </CardDescription>
         </CardHeader>
-        
-        <CardContent>
-          <div className="rounded-lg border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">ID</TableHead>
-                  <TableHead className="font-semibold">Type</TableHead>
-                  <TableHead className="font-semibold">Location</TableHead>
-                  <TableHead className="font-semibold">Reporter</TableHead>
-                  <TableHead className="font-semibold">Date/Time</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Severity</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredIncidents.map((incident) => (
-                  <TableRow key={incident.id} className="hover:bg-muted/30">
-                    <TableCell className="font-mono text-sm">{incident.id}</TableCell>
-                    <TableCell className="font-medium">{incident.type}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        {incident.location}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3 text-muted-foreground" />
-                        {incident.reporter}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        {incident.date} {incident.time}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={incident.status} />
-                    </TableCell>
-                    <TableCell>
-                      <SeverityBadge severity={incident.severity} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Details</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Reported By</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredIncidents.length === 0 ? (
+                  <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No incidents found matching criteria.
+                      </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ) : (
+                filteredIncidents.map((incident) => (
+                    <TableRow key={incident.id} className="group">
+                    <TableCell>
+                        <div className="flex flex-col">
+                        <span className="font-medium flex items-center gap-2">
+                            {incident.type}
+                            <Badge variant="outline" className={`text-[10px] px-1 py-0 h-4 ${
+                                incident.severity === 'critical' ? 'border-red-500 text-red-500' : 
+                                incident.severity === 'high' ? 'border-orange-500 text-orange-500' : ''
+                            }`}>
+                                {incident.severity}
+                            </Badge>
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={incident.description}>
+                            {incident.description}
+                        </span>
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5" />
+                        {incident.location}
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{incident.reporter_name}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {formatDistanceToNow(new Date(incident.created_at), { addSuffix: true })}
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-2">
+                            <Select 
+                                defaultValue={incident.status} 
+                                onValueChange={(val) => handleStatusUpdate(incident.id, val)}
+                            >
+                                <SelectTrigger className={`h-8 w-[130px] ${
+                                    incident.status === 'resolved' ? 'border-green-200 bg-green-50 text-green-900' :
+                                    incident.status === 'investigating' ? 'border-blue-200 bg-blue-50 text-blue-900' : ''
+                                }`}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="new">New</SelectItem>
+                                    <SelectItem value="investigating">Investigating</SelectItem>
+                                    <SelectItem value="resolved">Resolved (+50 pts)</SelectItem>
+                                    <SelectItem value="dismissed">Dismissed</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right flex items-center justify-end gap-2">
+                       {/* Delete Button Only for Resolved Incidents */}
+                        {incident.status === 'resolved' && (
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Incident?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete this report.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteIncident(incident.id)} className="bg-destructive hover:bg-destructive/90">
+                                        Delete
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </TableCell>
+                    </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
-
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-destructive">
-                {incidents.filter(i => i.status === 'new').length}
-              </p>
-              <p className="text-sm text-muted-foreground">New</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-status-warning">
-                {incidents.filter(i => i.status === 'investigating').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Investigating</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-status-success">
-                {incidents.filter(i => i.status === 'resolved').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Resolved</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-muted-foreground">
-                {incidents.filter(i => i.status === 'dismissed').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Dismissed</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };

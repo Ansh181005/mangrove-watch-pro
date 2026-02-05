@@ -1,385 +1,198 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/contexts/AuthContext";
-import { 
-  Settings, 
-  User, 
-  Lock, 
-  Bell, 
-  Mail, 
-  Shield,
-  Save,
-  Camera,
-  Key
-} from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 
 export const AdminSettings = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
   // Profile settings
-  const [profileData, setProfileData] = useState({
-    name: user?.name || 'Admin User',
-    email: user?.email || 'admin@mangrove.org',
-    title: 'Surveillance System Administrator',
-    department: 'Environmental Protection',
-    location: 'Jakarta, Indonesia'
+  const [formData, setFormData] = useState({
+    full_name: '',
+    job_title: '',
+    department: '',
+    location: '',
+    avatar_url: ''
   });
 
-  // Notification settings
-  const [notifications, setNotifications] = useState({
-    newIncidents: true,
-    weeklyReports: true,
-    systemAlerts: true,
-    userRegistrations: false,
-    criticalAlerts: true,
-    emailDigest: true
-  });
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || '',
+        job_title: profile.job_title || '',
+        department: profile.department || '',
+        location: profile.location || '',
+        avatar_url: profile.avatar_url || ''
+      });
+    }
+  }, [profile]);
 
-  // Security settings
-  const [security, setSecurity] = useState({
-    twoFactorAuth: false,
-    sessionTimeout: '4', // hours
-    loginAlerts: true
-  });
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+        if (!event.target.files || event.target.files.length === 0) {
+            return;
+        }
+        setIsLoading(true);
+        const file = event.target.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${user?.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        
+        setFormData(prev => ({ ...prev, avatar_url: data.publicUrl }));
+        toast({
+            title: "Avatar Uploaded",
+            description: "Click Save Changes to apply.",
+        });
+    } catch (error: any) {
+        toast({
+            title: "Upload Failed",
+            description: error.message,
+            variant: "destructive"
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
+    if (!user) return;
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // Show success toast here
-    }, 1000);
-  };
+    try {
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                full_name: formData.full_name,
+                job_title: formData.job_title,
+                department: formData.department,
+                location: formData.location,
+                avatar_url: formData.avatar_url,
+                updated_at: new Date()
+            })
+            .eq('id', user.id);
 
-  const handleSaveNotifications = async () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-  };
+        if (error) throw error;
 
-  const handleSaveSecurity = async () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
+        toast({
+            title: "Settings Saved",
+            description: "Admin profile updated successfully."
+        });
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive"
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground">Manage your account preferences and system configuration</p>
+       <div>
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground">Manage your admin profile and system preferences.</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Profile Settings */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Profile Information
-              </CardTitle>
-              <CardDescription>
-                Update your personal information and profile details
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Avatar Section */}
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={user?.photoURL} />
-                  <AvatarFallback className="bg-primary/20 text-primary text-xl">
-                    {profileData.name.charAt(0)}
-                  </AvatarFallback>
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Information</CardTitle>
+            <CardDescription>Update your personal information and profile picture.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+             <div className="flex items-center gap-6">
+                <Avatar className="h-24 w-24">
+                    <AvatarImage src={formData.avatar_url} />
+                    <AvatarFallback className="text-xl">
+                        {user?.email?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
                 </Avatar>
-                <div>
-                  <Button variant="outline" size="sm" className="mb-2">
-                    <Camera className="h-4 w-4 mr-2" />
-                    Change Photo
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    JPG, PNG or GIF. Max size 2MB.
-                  </p>
+                <div className="relative">
+                    <input
+                        type="file"
+                        id="admin-avatar-upload"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        disabled={isLoading}
+                    />
+                    <Button 
+                        variant="outline" 
+                        disabled={isLoading}
+                        onClick={() => document.getElementById('admin-avatar-upload')?.click()}
+                    >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {isLoading ? 'Uploading...' : 'Change Avatar'}
+                    </Button>
                 </div>
+             </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="admin-name">Full Name</Label>
+                <Input 
+                    id="admin-name" 
+                    value={formData.full_name} 
+                    onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                />
               </div>
-
-              {/* Form Fields */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={profileData.name}
-                    onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="title">Job Title</Label>
-                  <Input
-                    id="title"
-                    value={profileData.title}
-                    onChange={(e) => setProfileData({...profileData, title: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    value={profileData.department}
-                    onChange={(e) => setProfileData({...profileData, department: e.target.value})}
-                  />
-                </div>
-                
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={profileData.location}
-                    onChange={(e) => setProfileData({...profileData, location: e.target.value})}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-email">Email</Label>
+                <Input id="admin-email" value={user?.email || ''} disabled />
               </div>
-
-              <Button onClick={handleSaveProfile} disabled={isLoading} className="w-full md:w-auto">
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? 'Saving...' : 'Save Profile'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Security Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5 text-primary" />
-                Security Settings
-              </CardTitle>
-              <CardDescription>
-                Manage your account security and authentication preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Two-Factor Authentication</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Add an extra layer of security to your account
-                    </p>
-                  </div>
-                  <Switch
-                    checked={security.twoFactorAuth}
-                    onCheckedChange={(checked) => 
-                      setSecurity({...security, twoFactorAuth: checked})
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Login Alerts</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified when someone logs into your account
-                    </p>
-                  </div>
-                  <Switch
-                    checked={security.loginAlerts}
-                    onCheckedChange={(checked) => 
-                      setSecurity({...security, loginAlerts: checked})
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="timeout">Session Timeout (hours)</Label>
-                  <Input
-                    id="timeout"
-                    type="number"
-                    min="1"
-                    max="24"
-                    value={security.sessionTimeout}
-                    onChange={(e) => setSecurity({...security, sessionTimeout: e.target.value})}
-                    className="w-24"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-title">Job Title</Label>
+                <Input 
+                    id="admin-title" 
+                    value={formData.job_title} 
+                    onChange={(e) => setFormData({...formData, job_title: e.target.value})}
+                    placeholder="e.g. Senior Administrator"
+                />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-dept">Department</Label>
+                <Input 
+                    id="admin-dept" 
+                    value={formData.department} 
+                    onChange={(e) => setFormData({...formData, department: e.target.value})}
+                    placeholder="e.g. Operations"
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="admin-loc">Location</Label>
+                <Input 
+                    id="admin-loc" 
+                    value={formData.location} 
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                />
+              </div>
+            </div>
 
-              <div className="pt-4 border-t border-border">
-                <Button variant="outline" className="mb-4">
-                  <Key className="h-4 w-4 mr-2" />
-                  Change Password
+            <div className="flex justify-end">
+                <Button onClick={handleSaveProfile} disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
                 </Button>
-              </div>
-
-              <Button onClick={handleSaveSecurity} disabled={isLoading} className="w-full md:w-auto">
-                <Shield className="h-4 w-4 mr-2" />
-                {isLoading ? 'Saving...' : 'Save Security Settings'}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Notification Settings */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                Notifications
-              </CardTitle>
-              <CardDescription>
-                Configure how you receive updates and alerts
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>New Incidents</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Immediate alerts
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.newIncidents}
-                    onCheckedChange={(checked) => 
-                      setNotifications({...notifications, newIncidents: checked})
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Critical Alerts</Label>
-                    <p className="text-xs text-muted-foreground">
-                      High-priority incidents
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.criticalAlerts}
-                    onCheckedChange={(checked) => 
-                      setNotifications({...notifications, criticalAlerts: checked})
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Weekly Reports</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Summary reports
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.weeklyReports}
-                    onCheckedChange={(checked) => 
-                      setNotifications({...notifications, weeklyReports: checked})
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>System Alerts</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Technical updates
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.systemAlerts}
-                    onCheckedChange={(checked) => 
-                      setNotifications({...notifications, systemAlerts: checked})
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>User Registrations</Label>
-                    <p className="text-xs text-muted-foreground">
-                      New user signups
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.userRegistrations}
-                    onCheckedChange={(checked) => 
-                      setNotifications({...notifications, userRegistrations: checked})
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Email Digest</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Daily summary email
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.emailDigest}
-                    onCheckedChange={(checked) => 
-                      setNotifications({...notifications, emailDigest: checked})
-                    }
-                  />
-                </div>
-              </div>
-
-              <Button onClick={handleSaveNotifications} disabled={isLoading} className="w-full">
-                <Mail className="h-4 w-4 mr-2" />
-                {isLoading ? 'Saving...' : 'Save Preferences'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* System Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5 text-primary" />
-                System Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Version</span>
-                <span className="font-mono">v2.1.4</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Last Updated</span>
-                <span>Jan 15, 2024</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Server Status</span>
-                <span className="text-status-success">Online</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Data Backup</span>
-                <span className="text-status-success">Current</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

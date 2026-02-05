@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
+## Mangrove Watch Pro
 
-## Project info
+An environmental protection dashboard for monitoring incidents in mangrove conservation areas. Built with React + Vite + TypeScript, shadcn/ui, Tailwind CSS, TanStack Query, and Supabase.
 
-**URL**: https://lovable.dev/projects/5a83ec94-37ce-4534-8bd1-b1d4a4143dda
+**Key Features**
+- Admin dashboard with metrics and recent incidents
+- Realtime incident trends chart (weekly reports vs resolved)
+- Role-protected Admin and User layouts/routes
+- User reporting, profile, achievements, and reports pages
+- Themed Home page with Sign In / Sign Up
 
-## How can I edit this code?
+**Tech Stack**
+- React 18, TypeScript, Vite
+- Tailwind CSS + shadcn/ui components
+- TanStack Query for data fetching/caching
+- Supabase for auth, database, and realtime
+- Recharts for analytics visualizations
 
-There are several ways of editing your application.
+### Getting Started
 
-**Use Lovable**
+1) Install dependencies
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5a83ec94-37ce-4534-8bd1-b1d4a4143dda) and start prompting.
+```bash
+npm install
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+2) Configure environment
 
-**Use your preferred IDE**
+Create a `.env` file in the project root with your Supabase credentials:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+3) Run the dev server
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Then open the printed local URL in your browser.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Build & Preview
 
-**Use GitHub Codespaces**
+```bash
+npm run build
+npm run preview
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Project Structure (excerpt)
 
-## What technologies are used for this project?
+- `src/pages/AdminDashboard.tsx` – Admin overview + incident trends
+- `src/components/IncidentTrends.tsx` – Weekly chart (reports/resolved) with realtime updates
+- `src/lib/supabase.ts` – Supabase client
+- `src/pages/Home.tsx` – Themed landing with Sign In/Sign Up
+- `public/favicon.svg` – Browser tab icon
 
-This project is built with:
+### Notes
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- The incident trends chart expects an `incidents` table with columns like `id`, `created_at`, `status` (use `resolved` for resolved items). Adjust selectors if your schema differs.
+- SQL bootstrap files are provided: `supabase_setup.sql`, `supabase_fix_roles.sql`.
 
-## How can I deploy this project?
+### License
 
-Simply open [Lovable](https://lovable.dev/projects/5a83ec94-37ce-4534-8bd1-b1d4a4143dda) and click on Share -> Publish.
+This project is for demonstration and internal use. Add your preferred license if distributing.
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
