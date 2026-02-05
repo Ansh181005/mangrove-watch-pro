@@ -30,56 +30,69 @@ import Home from "@/pages/Home";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          {/* Redirect to /home on first load */}
-          {window.location.pathname === '/' && <Navigate to="/home" replace />}
-          <Routes>
-            {/* Public Route */}
-            <Route path="/admin_login" element={<AdminLogin />} />
-            <Route path="/admin_signup" element={<AdminSignup />} />
-            <Route path="/home" element={<Home />} />
-            
-            {/* Protected Routes with Admin Layout */}
-            <Route path="/" element={
-              <AdminRoute>
-                <AdminLayout />
-              </AdminRoute>
-            }>
-              <Route index element={<Navigate to="/admin_dashboard" replace />} />
-              <Route path="admin_dashboard" element={<AdminDashboard />} />
-              <Route path="admin_incidents" element={<AdminIncidents />} />
-              <Route path="admin_users" element={<AdminUsers />} />
-              <Route path="admin_gamification" element={<AdminGamification />} />
-              <Route path="admin_settings" element={<AdminSettings />} />
-            </Route>
-            
-            {/* Protected Routes with User Layout */}
-            <Route path="/user" element={
-              <ProtectedRoute>
-                <UserLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<UserDashboard />} />
-              <Route path="dashboard" element={<UserDashboard />} />
-              <Route path="report" element={<ReportIncident />} />
-              <Route path="reports" element={<UserReports />} />
-              <Route path="achievements" element={<UserAchievements />} />
-              <Route path="profile" element={<UserProfile />} />
-            </Route>
-            
-            {/* Catch-all Route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+
+import React from "react";
+
+const App = () => {
+  const [redirected, setRedirected] = React.useState(false);
+
+  React.useEffect(() => {
+    if (window.location.pathname === "/") {
+      window.history.replaceState({}, "", "/home");
+      setRedirected(true);
+    } else {
+      setRedirected(true);
+    }
+  }, []);
+
+  if (!redirected) return null;
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public Route */}
+              <Route path="/admin_login" element={<AdminLogin />} />
+              <Route path="/admin_signup" element={<AdminSignup />} />
+              <Route path="/home" element={<Home />} />
+              {/* Protected Routes with Admin Layout */}
+              <Route path="/" element={
+                <AdminRoute>
+                  <AdminLayout />
+                </AdminRoute>
+              }>
+                <Route index element={<Navigate to="/admin_dashboard" replace />} />
+                <Route path="admin_dashboard" element={<AdminDashboard />} />
+                <Route path="admin_incidents" element={<AdminIncidents />} />
+                <Route path="admin_users" element={<AdminUsers />} />
+                <Route path="admin_gamification" element={<AdminGamification />} />
+                <Route path="admin_settings" element={<AdminSettings />} />
+              </Route>
+              {/* Protected Routes with User Layout */}
+              <Route path="/user" element={
+                <ProtectedRoute>
+                  <UserLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<UserDashboard />} />
+                <Route path="dashboard" element={<UserDashboard />} />
+                <Route path="report" element={<ReportIncident />} />
+                <Route path="reports" element={<UserReports />} />
+                <Route path="achievements" element={<UserAchievements />} />
+                <Route path="profile" element={<UserProfile />} />
+              </Route>
+              {/* Catch-all Route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
