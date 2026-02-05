@@ -66,6 +66,13 @@ export const AdminLogin = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-mangrove p-4">
+      <button
+        type="button"
+        onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/home')}
+        className="absolute top-6 left-6 z-20 px-4 py-2 rounded bg-card/80 text-foreground border border-border shadow hover:bg-card"
+      >
+        ← Back
+      </button>
       <div className="absolute inset-0 bg-gradient-mangrove opacity-90" />
       <div className="absolute inset-0">
         <Waves className="absolute top-1/4 left-1/4 h-32 w-32 text-ocean-light/20 animate-pulse" />

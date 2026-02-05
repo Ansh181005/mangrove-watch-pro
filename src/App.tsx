@@ -37,6 +37,8 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          {/* Redirect to /home on first load */}
+          {window.location.pathname === '/' && <Navigate to="/home" replace />}
           <Routes>
             {/* Public Route */}
             <Route path="/admin_login" element={<AdminLogin />} />
