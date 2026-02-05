@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, CheckCircle, Users, TrendingUp, TrendingDown, Eye } from "lucide-react";
+import { IncidentTrends } from '@/components/IncidentTrends';
 
 const MetricCard = ({ 
   title, 
@@ -46,7 +49,8 @@ const RecentIncident = ({
   const statusColors = {
     resolved: 'text-status-success bg-status-success/10',
     investigating: 'text-status-warning bg-status-warning/10',
-    new: 'text-destructive bg-destructive/10'
+    new: 'text-destructive bg-destructive/10',
+    dismissed: 'text-muted-foreground bg-muted'
   };
 
   return (
@@ -59,7 +63,7 @@ const RecentIncident = ({
         </div>
       </div>
       <div className="text-right">
-        <span className={`text-xs px-2 py-1 rounded-full ${statusColors[status]}`}>
+        <span className={`text-xs px-2 py-1 rounded-full ${statusColors[status] || statusColors.new}`}>
           {status}
         </span>
         <p className="text-xs text-muted-foreground mt-1">{time}</p>
@@ -70,11 +74,9 @@ const RecentIncident = ({
 
 const TopContributor = ({ 
   name, 
-  reports, 
   points 
 }: {
   name: string;
-  reports: number;
   points: number;
 }) => (
   <div className="flex items-center justify-between p-3 rounded-lg border border-border">
@@ -84,7 +86,7 @@ const TopContributor = ({
       </div>
       <div>
         <p className="text-sm font-medium text-foreground">{name}</p>
-        <p className="text-xs text-muted-foreground">{reports} reports</p>
+        <p className="text-xs text-muted-foreground">Leading Contributor</p>
       </div>
     </div>
     <div className="text-right">
@@ -94,19 +96,64 @@ const TopContributor = ({
 );
 
 export const AdminDashboard = () => {
-  const recentIncidents = [
-    { id: '1', type: 'Illegal Logging', location: 'Sector A-7', status: 'new' as const, time: '2h ago' },
-    { id: '2', type: 'Unauthorized Fishing', location: 'Coastal Zone B', status: 'investigating' as const, time: '4h ago' },
-    { id: '3', type: 'Pollution Discharge', location: 'River Delta C', status: 'resolved' as const, time: '1d ago' },
-    { id: '4', type: 'Wildlife Poaching', location: 'Protected Area D', status: 'investigating' as const, time: '2d ago' },
-  ];
+    const [stats, setStats] = useState({
+        newIncidents: 0,
+        resolved: 0,
+        activeContributors: 0,
+        areas: 8 // Mock for now
+    });
+    const [recentIncidents, setRecentIncidents] = useState<any[]>([]);
+    const [topContributors, setTopContributors] = useState<any[]>([]);
 
-  const topContributors = [
-    { name: 'Marine Bio NGO', reports: 23, points: 1250 },
-    { name: 'Coastal Watch', reports: 18, points: 980 },
-    { name: 'EcoGuardians', reports: 15, points: 875 },
-    { name: 'Local Community', reports: 12, points: 650 },
-  ];
+    useEffect(() => {
+        const fetchData = async () => {
+            // Fetch stats (incidents)
+            const { count: newCount } = await supabase.from('incidents').select('*', { count: 'exact', head: true }).eq('status', 'new');
+            const { count: resolvedCount } = await supabase.from('incidents').select('*', { count: 'exact', head: true }).eq('status', 'resolved');
+            
+            // Fetch stats (users)
+            const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+
+            // Fetch recent incidents
+            const { data: incidents } = await supabase
+                .from('incidents')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(4);
+            
+            // Fetch top contributors
+            const { data: contributors } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('points', { ascending: false })
+                .limit(4);
+
+            if (incidents) {
+                setRecentIncidents(incidents.map(i => ({
+                    id: i.id,
+                    type: i.type,
+                    location: i.location,
+                    status: i.status,
+                    time: new Date(i.created_at).toLocaleDateString()
+                })));
+            }
+
+            if (contributors) {
+                setTopContributors(contributors.map(c => ({
+                    name: c.full_name || 'Anonymous',
+                    points: c.points || 0
+                })));
+            }
+
+            setStats(prev => ({
+                ...prev,
+                newIncidents: newCount || 0,
+                resolved: resolvedCount || 0,
+                activeContributors: userCount || 0,
+            }));
+        };
+        fetchData();
+    }, []);
 
   return (
     <div className="space-y-6">
@@ -119,30 +166,30 @@ export const AdminDashboard = () => {
       {/* Metrics Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="New Incidents This Week"
-          value="24"
-          description="+12% from last week"
+          title="New Incidents"
+          value={stats.newIncidents.toString()}
+          description="Requires attention"
           icon={AlertTriangle}
           trend="up"
         />
         <MetricCard
           title="Resolved Cases"
-          value="89"
-          description="+8% resolution rate"
+          value={stats.resolved.toString()}
+          description="Total resolved"
           icon={CheckCircle}
           trend="up"
         />
         <MetricCard
           title="Active Contributors"
-          value="156"
-          description="3 new this week"
+          value={stats.activeContributors.toString()}
+          description="Total users"
           icon={Users}
           trend="up"
         />
         <MetricCard
           title="Areas Monitored"
-          value="42"
-          description="Across 8 zones"
+          value={stats.areas.toString()}
+          description="Across monitored zones"
           icon={Eye}
         />
       </div>
@@ -161,9 +208,13 @@ export const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentIncidents.map((incident) => (
-              <RecentIncident key={incident.id} {...incident} />
-            ))}
+            {recentIncidents.length > 0 ? (
+                recentIncidents.map((incident) => (
+                <RecentIncident key={incident.id} {...incident} />
+                ))
+            ) : (
+                <div className="text-sm text-muted-foreground">No recent incidents found.</div>
+            )}
           </CardContent>
         </Card>
 
@@ -179,32 +230,21 @@ export const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {topContributors.map((contributor, index) => (
-              <TopContributor key={index} {...contributor} />
-            ))}
+            {topContributors.length > 0 ? (
+                topContributors.map((contributor, index) => (
+                <TopContributor key={index} {...contributor} />
+                ))
+            ) : (
+                <div className="text-sm text-muted-foreground">No contributors found yet.</div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Trend Chart Placeholder */}
+      {/* Incident Trends */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Incident Trends Over Time
-          </CardTitle>
-          <CardDescription>
-            Weekly incident reports and resolution rates
-          </CardDescription>
-        </CardHeader>
         <CardContent>
-          <div className="h-64 bg-gradient-ocean/10 rounded-lg flex items-center justify-center border border-border">
-            <div className="text-center">
-              <TrendingUp className="h-12 w-12 text-primary mx-auto mb-2" />
-              <p className="text-muted-foreground">Chart visualization would be implemented here</p>
-              <p className="text-xs text-muted-foreground mt-1">Showing incident trends and patterns</p>
-            </div>
-          </div>
+          <IncidentTrends />
         </CardContent>
       </Card>
     </div>

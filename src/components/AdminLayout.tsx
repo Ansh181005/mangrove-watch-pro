@@ -83,14 +83,14 @@ export const AdminLayout = () => {
           <div className="p-4 border-t border-border">
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.photoURL} />
+                <AvatarImage src={user?.user_metadata?.avatar_url} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {user?.name?.charAt(0) || 'A'}
+                  {user?.user_metadata?.name?.charAt(0) || user?.email?.charAt(0) || 'A'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
-                  {user?.name || 'Admin'}
+                  {user?.user_metadata?.name || 'Admin'}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {user?.email || 'admin@mangrove.org'}

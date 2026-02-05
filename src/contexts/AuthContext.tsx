@@ -1,16 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  photoURL?: string;
-}
+import { supabase } from '@/lib/supabase';
+import { Session, User } from '@supabase/supabase-js';
 
 interface AuthContextType {
+  session: Session | null;
   user: User | null;
-  login: (userData: User) => void;
-  logout: () => void;
+  profile: any | null;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<{ data: any; error: any }>;
+  signup: (email: string, password: string, name: string) => Promise<{ data: any; error: any }>;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -25,34 +24,93 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
-    const savedUser = localStorage.getItem('mangrove_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setIsAdmin(false);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('mangrove_user', JSON.stringify(userData));
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (error) throw error;
+      setProfile(data);
+      setIsAdmin(data?.role === 'admin' || data?.email === 'patellprakshil@gmail.com');
+      
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const logout = () => {
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { data, error };
+  };
+
+  const signup = async (email: string, password: string, name: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+        },
+      },
+    });
+    return { data, error };
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
     setUser(null);
-    localStorage.removeItem('mangrove_user');
+    setProfile(null);
+    setIsAdmin(false);
   };
 
-  const value = {
-    user,
-    login,
-    logout,
-    isLoading,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ session, user, profile, isAdmin, login, signup, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
