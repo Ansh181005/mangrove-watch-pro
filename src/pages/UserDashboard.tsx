@@ -16,7 +16,7 @@ export const UserDashboard = () => {
     
     const recentActivity = [
         { id: 1, action: "Reported illegal logging", location: "Mangrove Sector A", date: "2 days ago", status: "Investigating" },
-        { id: 2, action: "Verified community report", location: "Coastal Zone B", date: "5 days ago", status: "Resolved" },
+        { id: 2, action: "Verified report", location: "Coastal Zone B", date: "5 days ago", status: "Resolved" },
         { id: 3, action: "Upload evidence photos", location: "River Delta C", date: "1 week ago", status: "New" },
     ];
     
@@ -84,27 +84,7 @@ export const UserDashboard = () => {
                 </Card>
                 
                 <Card className="col-span-3">
-                    <CardHeader>
-                        <CardTitle>Community Leaderboard</CardTitle>
-                        <CardDescription>Top contributors this month</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {/* Placeholder for leaderboard */}
-                        <div className="space-y-4">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="flex items-center gap-4">
-                                    <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center text-xs font-bold">
-                                        {i}
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                        <p className="text-sm font-medium leading-none">User {i}</p>
-                                        <p className="text-xs text-muted-foreground">Isle of Man • {1000 - i * 50} pts</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                    {/* Community Leaderboard removed */}
             </div>
         </div>
     );

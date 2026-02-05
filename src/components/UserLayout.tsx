@@ -20,7 +20,6 @@ const navigation = [
   { name: "Dashboard", href: "/user/dashboard", icon: LayoutDashboard },
   { name: "Report Incident", href: "/user/report", icon: PlusCircle },
   { name: "My Reports", href: "/user/reports", icon: FileText },
-  { name: "Community", href: "/user/community", icon: MapPin },
   { name: "Achievements", href: "/user/achievements", icon: Trophy },
   { name: "Profile", href: "/user/profile", icon: User },
 ];
